@@ -13,6 +13,7 @@ jobs:
       - run: |
           echo "Installing dependencies..."
           npm install
+
   test:
     docker:
       - image: cimg/node:16.10
@@ -23,6 +24,7 @@ jobs:
       - run: |
           echo "Running tests..."
           npm run test
+
   build-and-push:
     executor: docker/docker
     steps:
@@ -30,19 +32,23 @@ jobs:
       - checkout
       - docker/check
       - docker/build:
-          image: afifrifaie/education-space
-          tag: 0.1.0
+          image: afifrifaie/education-space:${CIRCLE_TAG}
       - docker/push:
-          image: afifrifaie/education-space
-          tag: 0.1.0
+          image: afifrifaie/education-space:${CIRCLE_TAG}
 
 workflows:
   simple_workflow:
     jobs:
-      - build
+      - build:
+          filters:
+            branches:
+              only: main
       - test:
           requires:
             - build
       - build-and-push:
           requires:
             - test
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+$/
