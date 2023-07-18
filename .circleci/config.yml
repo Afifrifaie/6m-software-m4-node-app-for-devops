@@ -2,6 +2,7 @@ version: 2.1
 orbs:
   node: circleci/node@5.0.1
   docker: circleci/docker@2.1.4
+  snyk: snyk/snyk@1.5.0
 jobs:
   build:
     docker:
@@ -13,7 +14,6 @@ jobs:
       - run: |
           echo "Installing dependencies..."
           npm install
-
   test:
     docker:
       - image: cimg/node:16.10
@@ -24,31 +24,26 @@ jobs:
       - run: |
           echo "Running tests..."
           npm run test
-
-  build-and-push:
-    executor: docker/docker
+  scan:
+    docker:
+        - image: cimg/node:16.10
+    environment:
+        IMAGE_NAME: afifrifaie/education-space
     steps:
-      - setup_remote_docker
-      - checkout
-      - docker/check
-      - docker/build:
-          image: afifrifaie/education-space:${CIRCLE_TAG}
-      - docker/push:
-          image: afifrifaie/education-space:${CIRCLE_TAG}
+        - checkout
+        - setup_remote_docker      
+        - docker/check
+        - run: docker build -t $IMAGE_NAME .
+        - snyk/scan: 
+            docker-image-name: $IMAGE_NAME
 
 workflows:
   simple_workflow:
     jobs:
-      - build:
-          filters:
-            branches:
-              only: main
+      - build
       - test:
           requires:
             - build
-      - build-and-push:
+      - scan:
           requires:
-            - test
-          filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+$/
+            - build
